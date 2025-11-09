@@ -15,4 +15,5 @@ export interface ModelData {
   position: ModelPosition;
   rotation: ModelRotation;
   modelPath: string;
+  hidden?: boolean;
 }

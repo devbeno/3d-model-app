@@ -12,6 +12,8 @@ interface SceneProps {
   is2DView: boolean;
   onPositionChange: (id: string, position: { x: number; y: number; z: number }) => void;
   onRotationChange: (id: string, rotation: { x: number; y: number; z: number }) => void;
+  onDelete: (id: string) => void;
+  onHide: (id: string, hidden: boolean) => void;
 }
 
 function LoadingBox() {
@@ -23,9 +25,13 @@ function LoadingBox() {
   );
 }
 
-export default function Scene({ models, is2DView, onPositionChange, onRotationChange }: SceneProps) {
+export default function Scene({ models, is2DView, onPositionChange, onRotationChange, onDelete, onHide }: SceneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const modelRefsMap = useRef<Map<string, THREE.Group>>(new Map());
+  
+  // For collision detection, only use visible models
+  // But render all models (hidden ones will show as wireframe)
+  const visibleModels = models.filter(m => !m.hidden);
 
   return (
     <Canvas
@@ -48,12 +54,14 @@ export default function Scene({ models, is2DView, onPositionChange, onRotationCh
           <DraggableModel
             key={model.id}
             modelData={model}
-            otherModels={models}
+            otherModels={visibleModels}
             modelRefsMap={modelRefsMap}
             onPositionChange={onPositionChange}
             onRotationChange={onRotationChange}
             onDragStart={() => setIsDragging(true)}
             onDragEnd={() => setIsDragging(false)}
+            onDelete={onDelete}
+            onHide={onHide}
           />
         ))}
       </Suspense>

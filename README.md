@@ -18,6 +18,9 @@ Ova aplikacija je razvijena kao zadatak koji demonstrira:
 - **Drag & Drop** - Prevlačenje modela mišem u realnom vremenu
 - **Collision Detection** - Sprečavanje preklapanja modela
 - **Rotation Controls** - Precizna rotacija po X, Y, Z osama sa slajderima
+- **Model Upload** - Upload novih GLB modela kroz web interfejs
+- **Model Management** - Sakrivanje i brisanje modela kroz kontekstni menu
+- **Smart Positioning** - Automatsko postavljanje novih modela na slobodne pozicije
 - **Firestore Sync** - Automatsko čuvanje i učitavanje pozicija/rotacija
 - **GLB Model Support** - Podrška za standardni 3D format
 - **Responsive UI** - Adaptirano korisničko sučelje
@@ -38,6 +41,7 @@ Ova aplikacija je razvijena kao zadatak koji demonstrira:
 ### Backend & Database
 - **Firebase 11** - Backend-as-a-Service
 - **Firestore** - NoSQL database za perzistenciju
+- **Next.js API Routes** - Server-side API za file upload
 
 ### Development
 - **ESLint** - Code linting
@@ -115,6 +119,21 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 
 ### 4. Dodavanje 3D Modela
 
+Postoje dva načina dodavanja modela:
+
+#### a) Preko Web Interfejsa (Preporučeno)
+1. Pokrenite aplikaciju (`npm run dev`)
+2. Kliknite na **"Upload Model"** dugme (gore levo)
+3. Prevucite GLB fajl ili kliknite "Browse Files"
+4. Model će biti automatski uploadovan i pojaviti se u sceni
+
+**Zahtjevi:**
+- Samo GLB format
+- Maksimalna veličina: 10MB
+- Fajl se automatski sprema u `public/models/` folder
+
+#### b) Ručno Dodavanje
+
 **Preuzimanje GLB modela:**
 - [Poly Pizza](https://poly.pizza/) - Preporučeno (mali, optimizovani modeli)
 - [Sketchfab](https://sketchfab.com/) - Filter: "Downloadable" + "glTF"
@@ -122,15 +141,16 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 - [Kenney](https://kenney.nl/assets) - Besplatni game assets
 
 **Dodavanje u projekat:**
-1. Preuzmite dva GLB modela (preporučeno < 2MB po modelu)
-2. Preimenujte ih u `model1.glb` i `model2.glb`
-3. Stavite ih u `public/models/` folder
+1. Preuzmite GLB modele (preporučeno < 2MB po modelu)
+2. Stavite ih direktno u `public/models/` folder
+3. Modeli će biti dostupni u aplikaciji
 
 ```
 public/
   └── models/
       ├── model1.glb
-      └── model2.glb
+      ├── model2.glb
+      └── [uploaded models...]
 ```
 
 ### 5. Pokretanje Development Servera
@@ -143,6 +163,40 @@ Otvorite [http://localhost:3000](http://localhost:3000) u browseru.
 
 ## Kako Koristiti
 
+### Upload Modela
+- **Lokacija**: Gore levo (zelena "Upload Model" ikona)
+- **Funkcija**: Upload novih GLB 3D modela
+- **Načini uploada**:
+  1. **Drag & Drop**: Prevucite GLB fajl u modal prozor
+  2. **Browse Files**: Kliknite "Browse Files" i izaberite fajl
+- **Validacija**: 
+  - Samo GLB fajlovi su dozvoljeni
+  - Maksimalna veličina: 10MB
+- **Rezultat**: Model se automatski sprema u `public/models/` i pojavljuje se u 3D sceni
+- **Pozicioniranje**: Novi modeli se automatski postavljaju na slobodne pozicije (ne preklapaju se sa postojećim modelima)
+
+### Upravljanje Modelima
+
+#### Drag Handle i Menu
+- **Lokacija**: Plavi krug sa strelicama iznad svakog modela
+- **Drag Handle**: Kliknite i držite plavi krug za pomeranje modela
+- **Menu Button**: Sivi krug sa tri tačke (⋮) pored drag handle-a
+- **Funkcionalnosti**:
+  - **Drag & Drop**: Prevucite model pomoću plavog kruga
+  - **Sakrij/Prikaži**: Kliknite na menu button (⋮) → izaberite "Sakrij" ili "Prikaži"
+  - **Obriši**: Kliknite na menu button (⋮) → izaberite "Obriši" → potvrdite brisanje
+
+#### Sakrivanje Modela
+- **Kako sakriti**: Menu button (⋮) → "Sakrij"
+- **Rezultat**: Model se sakriva vizuelno, ali drag handle ostaje vidljiv (siva boja)
+- **Kako prikazati**: Kliknite na sivi drag handle → menu → "Prikaži"
+- **Napomena**: Sakriveni modeli ne blokiraju druge modele u collision detection-u
+
+#### Brisanje Modela
+- **Kako obrisati**: Menu button (⋮) → "Obriši" → potvrdite u dijalogu
+- **Rezultat**: Model se briše iz Firestore baze i scene
+- **Napomena**: Brisanje je trajno i ne može se poništiti
+
 ### Toggle 2D/3D View
 - **Lokacija**: Gore desno
 - **Funkcija**: Prebacivanje između 3D perspektive i 2D top-down pogleda
@@ -150,12 +204,15 @@ Otvorite [http://localhost:3000](http://localhost:3000) u browseru.
 - **2D Mode**: Fiksna kamera odozgo
 
 ### Drag & Drop Modeli
-1. Kliknite na model
+1. Kliknite na plavi drag handle (krug sa strelicama) iznad modela
 2. Držite i prevucite mišem
 3. Pustite na željenoj poziciji
 4. Pozicija se automatski čuva u Firestore
 
-**Napomena**: Detekcija kolizija sprečava preklapanje modela.
+**Napomena**: 
+- Detekcija kolizija sprečava preklapanje modela
+- Sakriveni modeli ne blokiraju druge modele
+- Drag handle je uvijek vidljiv, čak i kada je model sakriven
 
 ### Rotacija Modela
 - **Lokacija**: Dole levo
@@ -176,6 +233,9 @@ Otvorite [http://localhost:3000](http://localhost:3000) u browseru.
 ```
 3d-model-app/
 ├── app/
+│   ├── api/
+│   │   └── upload/
+│   │       └── route.ts      # API route za file upload
 │   ├── page.tsx              # Glavna stranica sa state managementom
 │   ├── layout.tsx            # Root layout
 │   └── globals.css           # Globalni stilovi
@@ -183,6 +243,7 @@ Otvorite [http://localhost:3000](http://localhost:3000) u browseru.
 ├── components/
 │   ├── DraggableModel.tsx    # 3D model sa drag funkcionalošću
 │   ├── Scene.tsx             # 3D Canvas scena
+│   ├── ModelUpload.tsx       # Upload modal komponenta
 │   ├── RotationControl.tsx   # UI kontrole za rotaciju
 │   └── ViewToggle.tsx        # Toggle dugme za 2D/3D
 │
@@ -194,7 +255,7 @@ Otvorite [http://localhost:3000](http://localhost:3000) u browseru.
 │   └── model.ts              # TypeScript type definitions
 │
 ├── public/
-│   └── models/               # GLB 3D modeli (dodajte ovde)
+│   └── models/               # GLB 3D modeli (uploadovani i ručno dodati)
 │
 ├── .env.local.example        # Template za environment varijable
 ├── .env.local                # Vaši Firebase credentials (ne commituje se)
@@ -221,7 +282,10 @@ Otvorite [http://localhost:3000](http://localhost:3000) u browseru.
 - GLB model loading sa useGLTF hook-om
 - Pointer events za drag & drop
 - Collision detection između modela
+- Drag handle i menu button za upravljanje modelima
+- Funkcionalnost za sakrivanje/prikazivanje modela
 - Automatsko spremanje u Firestore
+- Visual feedback za sakrivene modele (sivi drag handle)
 
 #### `components/RotationControl.tsx`
 - UI slajderi za X, Y, Z rotaciju
@@ -232,6 +296,26 @@ Otvorite [http://localhost:3000](http://localhost:3000) u browseru.
 - Toggle dugme sa SVG ikonama
 - Prebacivanje između 2D/3D camera pogleda
 
+#### `components/ModelUpload.tsx`
+- Upload modal sa drag & drop funkcionalnošću
+- Validacija fajlova (format, veličina)
+- Integracija sa API route za server-side upload
+- Automatsko kreiranje Firestore entry-ja nakon uploada
+- Prosleđivanje postojećih modela za smart positioning
+
+#### `app/api/upload/route.ts`
+- Next.js API route za file upload
+- Validacija i spremanje fajlova u `public/models/` folder
+- Sanitizacija imena fajlova (zamjena razmaka i posebnih karaktera)
+- Generisanje jedinstvenih imena fajlova (timestamp)
+- Vraćanje public path-a za koristenje u aplikaciji
+
+#### `lib/firestore.ts`
+- CRUD operacije za modele (create, read, update, delete)
+- Smart positioning algoritam za nove modele
+- Spiralni algoritam za pronalaženje slobodnih pozicija
+- Automatsko izbjegavanje kolizija pri kreiranju novih modela
+
 ## Firestore Data Structure
 
 ```typescript
@@ -240,15 +324,28 @@ Otvorite [http://localhost:3000](http://localhost:3000) u browseru.
   "model1": {
     position: { x: -2, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0 },
-    modelPath: "/models/model1.glb"
+    modelPath: "/models/model1.glb",
+    hidden: false
   },
   "model2": {
     position: { x: 2, y: 0, z: 0 },
     rotation: { x: 0, y: 0, z: 0 },
-    modelPath: "/models/model2.glb"
+    modelPath: "/models/model2.glb",
+    hidden: false
+  },
+  "model_1762715284490": {
+    position: { x: 5, y: 0, z: -5 },
+    rotation: { x: 0, y: 0, z: 0 },
+    modelPath: "/models/1762715284490_light_stand.glb",
+    hidden: false
   }
 }
 ```
+
+**Napomena**: 
+- `hidden` property je opcionalan i defaultuje na `false`
+- Sakriveni modeli imaju `hidden: true`
+- Pozicije se automatski generišu pri upload-u novih modela
 
 ### Firestore Operacije
 
@@ -263,8 +360,30 @@ await saveModelData({
   id: 'model1',
   position: { x: 1, y: 0, z: 1 },
   rotation: { x: 0, y: 1.57, z: 0 },
-  modelPath: '/models/model1.glb'
+  modelPath: '/models/model1.glb',
+  hidden: false
 });
+```
+
+**Kreiranje novog modela (sa smart positioning):**
+```typescript
+const existingModels = await loadAllModels();
+const modelId = await createNewModel('/models/new_model.glb', existingModels);
+// Model će biti automatski postavljen na slobodnu poziciju
+```
+
+**Brisanje modela:**
+```typescript
+await deleteModel('model1');
+```
+
+**Sakrivanje/Prikazivanje modela:**
+```typescript
+// Sakrij model
+await saveModelData({ ...modelData, hidden: true });
+
+// Prikaži model
+await saveModelData({ ...modelData, hidden: false });
 ```
 
 ## Build za Produkciju
@@ -280,14 +399,35 @@ npm start
 ## Troubleshooting
 
 ### Modeli se ne prikazuju
-- Proverite da postoje `model1.glb` i `model2.glb` u `public/models/`
+- Proverite da postoje modeli u `public/models/` folderu
 - Proverite da su modeli < 5MB (preporučeno < 2MB)
 - Refresh stranicu (Ctrl+R)
+- Proverite browser konzolu za greške
+
+### Upload ne radi
+- Proverite da je fajl u GLB formatu
+- Proverite da je fajl manji od 10MB
+- Proverite da `public/models/` folder postoji i ima write permisije
+- Proverite server konzolu za detalje greške
+- Proverite da je Next.js development server pokrenut
+- Ime fajla se automatski sanitizuje (razmaci se zamjenjuju sa underscore)
+
+### Menu button ne radi
+- Proverite da klikate na sivi krug sa tri tačke (⋮), ne na plavi drag handle
+- Menu se otvara klikom na menu button
+- Klik van menija će ga zatvoriti
+- Sakriveni modeli imaju sivi drag handle - menu je i dalje dostupan
+
+### Modeli se preklapaju pri upload-u
+- Novi modeli se automatski postavljaju na slobodne pozicije
+- Ako se modeli i dalje preklapaju, proverite da li postoje modeli sa `hidden: true` u bazi
+- Refresh stranicu nakon upload-a da osvježite pozicije
 
 ### Firebase/Firestore greške
 - Proverite da je `.env.local` pravilno konfigurisan
 - Proverite da je Firestore omogućen u Firebase Console
 - Proverite Firestore Security Rules (test mode za development)
+- Upload fajlova ne zahtijeva Firebase Storage - fajlovi se spremaju lokalno
 
 ### WebGL Context Lost
 - Modeli su preveliki (optimizujte ili koristite manje modele)
@@ -295,13 +435,21 @@ npm start
 - Refresh browser
 
 ### React DevTools warning
--Warning "Invalid argument not valid semver" je benign - dolazi od DevTools ekstenzije
--Možete ignorisati ili ažurirati React DevTools ekstenziju
+- Warning "Invalid argument not valid semver" je benign - dolazi od DevTools ekstenzije
+- Možete ignorisati ili ažurirati React DevTools ekstenziju
 
 ## Napomene
 
 - Aplikacija **ne zahteva autentikaciju** - dostupna je svima
 - Svi korisnici mogu **uređivati pozicije i rotacije**
+- Svi korisnici mogu **uploadovati nove modele**
+- Svi korisnici mogu **sakrivati i brisati modele**
 - **Nema aktivnog database listenera** (prema zahtevima zadatka)
-- Promene se čuvaju **on-demand** (pri drag-u ili rotaciji)
+- Promene se čuvaju **on-demand** (pri drag-u, rotaciji, sakrivanju)
+- Uploadovani fajlovi se spremaju **lokalno** u `public/models/` folder
+- **Firebase Storage se ne koristi** - svi fajlovi su lokalni
+- Novi modeli se automatski postavljaju na **slobodne pozicije** (spiralni algoritam)
+- Sakriveni modeli **ne blokiraju** druge modele u collision detection-u
+- Imena fajlova se **automatski sanitizuju** pri upload-u (razmaci → underscore)
 - `.env.local` **ne commituje** se na GitHub (gitignore)
+- Uploadovani fajlovi u `public/models/` **se commituju** na GitHub (osim ako nisu u .gitignore)

@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { ModelData } from '@/types/model';
-import { loadModelData, saveModelData } from '@/lib/firestore';
+import { loadAllModels, saveModelData, deleteModel } from '@/lib/firestore';
 import ViewToggle from '@/components/ViewToggle';
 import RotationControl from '@/components/RotationControl';
+import ModelUpload from '@/components/ModelUpload';
 
 const Scene = dynamic(() => import('@/components/Scene'), {
   ssr: false,
@@ -27,32 +28,36 @@ export default function Home() {
 
   const loadModels = async () => {
     try {
-      const model1 = await loadModelData('model1');
-      const model2 = await loadModelData('model2');
+      // Load all models from Firestore
+      const allModels = await loadAllModels();
 
-      const defaultModels: ModelData[] = [
-        model1 || {
-          id: 'model1',
-          position: { x: -2, y: 0, z: 0 },
-          rotation: { x: 0, y: 0, z: 0 },
-          modelPath: '/models/model1.glb',
-        },
-        model2 || {
-          id: 'model2',
-          position: { x: 2, y: 0, z: 0 },
-          rotation: { x: 0, y: 0, z: 0 },
-          modelPath: '/models/model2.glb',
-        },
-      ];
+      // If no models exist, create default ones
+      if (allModels.length === 0) {
+        const defaultModels: ModelData[] = [
+          {
+            id: 'model1',
+            position: { x: -2, y: 0, z: 0 },
+            rotation: { x: 0, y: 0, z: 0 },
+            modelPath: '/models/model1.glb',
+          },
+          {
+            id: 'model2',
+            position: { x: 2, y: 0, z: 0 },
+            rotation: { x: 0, y: 0, z: 0 },
+            modelPath: '/models/model2.glb',
+          },
+        ];
 
-      setModels(defaultModels);
-
-      if (!model1 || !model2) {
-        defaultModels.forEach((model) => saveModelData(model));
+        // Save default models to Firestore
+        await Promise.all(defaultModels.map((model) => saveModelData(model)));
+        setModels(defaultModels);
+      } else {
+        setModels(allModels);
       }
     } catch (error) {
       console.error('Error loading models:', error);
 
+      // Fallback to default models
       const defaultModels: ModelData[] = [
         {
           id: 'model1',
@@ -89,6 +94,31 @@ export default function Home() {
     );
   };
 
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteModel(id);
+      setModels((prev) => prev.filter((model) => model.id !== id));
+    } catch (error) {
+      console.error('Error deleting model:', error);
+    }
+  };
+
+  const handleHide = async (id: string, hidden: boolean) => {
+    try {
+      const model = models.find((m) => m.id === id);
+      if (model) {
+        await saveModelData({ ...model, hidden });
+        setModels((prev) =>
+          prev.map((model) =>
+            model.id === id ? { ...model, hidden } : model
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error hiding model:', error);
+    }
+  };
+
   const toggleView = () => {
     setIs2DView((prev) => !prev);
   };
@@ -103,6 +133,7 @@ export default function Home() {
 
   return (
     <main className="relative w-screen h-screen bg-gray-100">
+      <ModelUpload onUploadComplete={loadModels} existingModels={models} />
       <ViewToggle is2DView={is2DView} onToggle={toggleView} />
       <RotationControl models={models} onRotationChange={handleRotationChange} />
       <Scene
@@ -110,6 +141,8 @@ export default function Home() {
         is2DView={is2DView}
         onPositionChange={handlePositionChange}
         onRotationChange={handleRotationChange}
+        onDelete={handleDelete}
+        onHide={handleHide}
       />
     </main>
   );
