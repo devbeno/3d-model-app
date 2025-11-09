@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
 import DraggableModel from './DraggableModel';
@@ -23,6 +23,8 @@ function LoadingBox() {
 }
 
 export default function Scene({ models, is2DView, onPositionChange, onRotationChange }: SceneProps) {
+  const [isDragging, setIsDragging] = useState(false);
+
   return (
     <Canvas
       camera={{
@@ -31,6 +33,7 @@ export default function Scene({ models, is2DView, onPositionChange, onRotationCh
       }}
       style={{ width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}
       gl={{ antialias: true }}
+      onPointerMissed={() => {}}
     >
       <color attach="background" args={['#f3f4f6']} />
       <ambientLight intensity={0.7} />
@@ -46,9 +49,22 @@ export default function Scene({ models, is2DView, onPositionChange, onRotationCh
             otherModels={models}
             onPositionChange={onPositionChange}
             onRotationChange={onRotationChange}
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={() => setIsDragging(false)}
           />
         ))}
       </Suspense>
+
+      {/* Invisible plane for drag detection - catches all pointer events */}
+      <mesh
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0, 0]}
+        visible={false}
+        renderOrder={1000}
+      >
+        <planeGeometry args={[100, 100]} />
+        <meshBasicMaterial />
+      </mesh>
 
       <Grid
         args={[20, 20]}
@@ -64,9 +80,10 @@ export default function Scene({ models, is2DView, onPositionChange, onRotationCh
       />
 
       <OrbitControls
-        enableRotate={!is2DView}
-        enablePan={true}
-        enableZoom={true}
+        enabled={!isDragging}
+        enableRotate={!is2DView && !isDragging}
+        enablePan={!isDragging}
+        enableZoom={!isDragging}
         minDistance={2}
         maxDistance={50}
       />
