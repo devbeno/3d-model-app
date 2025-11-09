@@ -1,6 +1,8 @@
 # 3D Model Management Application
 
-Interaktivna web aplikacija za upravljanje 3D modelima sa podrškom za 2D/3D prikaze, drag & drop funkcionalnost, rotaciju i real-time sinhronizaciju sa Firestore bazom podataka.
+Interaktivna web aplikacija za upravljanje 3D modelima sa podrškom za 2D/3D prikaze, drag & drop funkcionalnost, upload modela, brisanje sakrivanje, rotaciju i real-time sinhronizaciju sa Firestore bazom podataka.
+
+![App Screenshot](./screenshot.png)
 
 ## O Projektu
 
