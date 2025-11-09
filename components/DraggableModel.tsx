@@ -10,6 +10,7 @@ import { saveModelData } from '@/lib/firestore';
 interface DraggableModelProps {
   modelData: ModelData;
   otherModels: ModelData[];
+  modelRefsMap: React.MutableRefObject<Map<string, THREE.Group>>;
   onPositionChange: (id: string, position: { x: number; y: number; z: number }) => void;
   onRotationChange: (id: string, rotation: { x: number; y: number; z: number }) => void;
   onDragStart: () => void;
@@ -19,12 +20,14 @@ interface DraggableModelProps {
 export default function DraggableModel({
   modelData,
   otherModels,
+  modelRefsMap,
   onPositionChange,
   onRotationChange,
   onDragStart,
   onDragEnd
 }: DraggableModelProps) {
   const meshRef = useRef<THREE.Group>(null);
+  const modelOnlyRef = useRef<THREE.Group>(null); // Reference to just the 3D model (no drag handle)
   const [isDragging, setIsDragging] = useState(false);
   const dragOffsetRef = useRef<THREE.Vector3>(new THREE.Vector3());
   const planeRef = useRef<THREE.Plane>(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
@@ -46,7 +49,17 @@ export default function DraggableModel({
         modelData.rotation.z
       );
     }
-  }, [modelData]);
+
+    // Register only the model (not the drag handle) in the shared refs map for collision detection
+    if (modelOnlyRef.current) {
+      modelRefsMap.current.set(modelData.id, modelOnlyRef.current);
+    }
+
+    return () => {
+      // Cleanup: remove from map when unmounted
+      modelRefsMap.current.delete(modelData.id);
+    };
+  }, [modelData, modelRefsMap]);
 
   // Global pointer up listener to ensure drag ends even if released outside canvas
   useEffect(() => {
@@ -75,26 +88,42 @@ export default function DraggableModel({
   }, [isDragging, modelData, onDragEnd]);
 
   const checkCollision = (newPosition: THREE.Vector3): boolean => {
-    const boundingBox = new THREE.Box3();
-    if (meshRef.current) {
-      const tempPosition = meshRef.current.position.clone();
-      meshRef.current.position.copy(newPosition);
-      boundingBox.setFromObject(meshRef.current);
-      meshRef.current.position.copy(tempPosition);
+    if (!modelOnlyRef.current || !meshRef.current) return false;
 
-      for (const other of otherModels) {
-        if (other.id === modelData.id) continue;
+    // We need to calculate what the modelOnly position would be at the new parent position
+    // Since modelOnlyRef is a child of meshRef, we need to update the parent's world matrix
+    const tempPosition = meshRef.current.position.clone();
+    meshRef.current.position.copy(newPosition);
+    meshRef.current.updateMatrixWorld(true);
 
-        const otherBox = new THREE.Box3(
-          new THREE.Vector3(other.position.x - 1, other.position.y - 1, other.position.z - 1),
-          new THREE.Vector3(other.position.x + 1, other.position.y + 1, other.position.z + 1)
-        );
+    const myBox = new THREE.Box3().setFromObject(modelOnlyRef.current);
 
-        if (boundingBox.intersectsBox(otherBox)) {
-          return true;
-        }
+    meshRef.current.position.copy(tempPosition);
+    meshRef.current.updateMatrixWorld(true);
+
+    // Expand the box for a safety margin
+    myBox.expandByScalar(0.5);
+
+    // Check collision with other models using actual bounding boxes
+    for (const other of otherModels) {
+      if (other.id === modelData.id) continue;
+
+      // Get the other model's mesh reference from the shared map
+      const otherModelOnly = modelRefsMap.current.get(other.id);
+      if (!otherModelOnly) continue;
+
+      // Create bounding box from the actual other model mesh (just the 3D model, no drag handle)
+      const otherBox = new THREE.Box3().setFromObject(otherModelOnly);
+
+      // Expand for safety margin
+      otherBox.expandByScalar(0.5);
+
+      // Check if bounding boxes intersect
+      if (myBox.intersectsBox(otherBox)) {
+        return true; // Collision detected
       }
     }
+
     return false;
   };
 
@@ -153,8 +182,10 @@ export default function DraggableModel({
 
   return (
     <group ref={meshRef}>
-      {/* The actual 3D model */}
-      <primitive object={scene.clone()} />
+      {/* The actual 3D model - separate ref for collision detection (excludes drag handle) */}
+      <group ref={modelOnlyRef}>
+        <primitive object={scene.clone()} />
+      </group>
 
       {/* Drag Handle - visible icon above model */}
       <group position={[0, 3.5, 0]} onPointerMove={handlePointerMove}>

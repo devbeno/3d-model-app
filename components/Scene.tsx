@@ -1,10 +1,11 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid } from '@react-three/drei';
 import DraggableModel from './DraggableModel';
 import { ModelData } from '@/types/model';
+import * as THREE from 'three';
 
 interface SceneProps {
   models: ModelData[];
@@ -24,6 +25,7 @@ function LoadingBox() {
 
 export default function Scene({ models, is2DView, onPositionChange, onRotationChange }: SceneProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const modelRefsMap = useRef<Map<string, THREE.Group>>(new Map());
 
   return (
     <Canvas
@@ -47,6 +49,7 @@ export default function Scene({ models, is2DView, onPositionChange, onRotationCh
             key={model.id}
             modelData={model}
             otherModels={models}
+            modelRefsMap={modelRefsMap}
             onPositionChange={onPositionChange}
             onRotationChange={onRotationChange}
             onDragStart={() => setIsDragging(true)}
